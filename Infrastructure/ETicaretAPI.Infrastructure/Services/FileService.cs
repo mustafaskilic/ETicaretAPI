@@ -41,6 +41,7 @@ namespace ETicaretAPI.Infrastructure.Services
         {
             string newFileName = await Task.Run(async () =>
                {
+                   
                    string extension = Path.GetExtension(fileName);
 
                    string oldName = "";
@@ -54,17 +55,21 @@ namespace ETicaretAPI.Infrastructure.Services
                    else
                    {
                        newFileName = fileName;
-                       int indexNo1 = newFileName.IndexOf("-");
+                       int indexNo1 = newFileName.LastIndexOf("-");
                        if (indexNo1 == -1)
                            newFileName = $"{Path.GetFileNameWithoutExtension(newFileName)}-2{extension}";
                        else
                        {
+                          
                            int indexNo2 = newFileName.IndexOf(".");
                            string fileNo = newFileName.Substring(indexNo1 + 1, indexNo2 - indexNo1 - 1);
-                           int _fileNo = int.Parse(fileNo);
-                           _fileNo++;
-                           newFileName = newFileName.Remove(indexNo1 + 1, indexNo2 - indexNo1 - 1)
-                                                        .Insert(indexNo1 + 1, _fileNo.ToString());
+                           if (int.TryParse(fileNo, out int _fileNo))
+                           {
+                               _fileNo++;
+                               newFileName = newFileName.Remove(indexNo1 + 1, indexNo2 - indexNo1 - 1)
+                                                            .Insert(indexNo1 + 1, _fileNo.ToString());
+                           }
+                           else newFileName = $"{Path.GetFileNameWithoutExtension(newFileName)}-2{extension}";
                        }
 
                    }
@@ -93,7 +98,7 @@ namespace ETicaretAPI.Infrastructure.Services
                 string fileNewName = await RenameFileAsync(uploadPath, file.FileName);
 
                 bool result = await CopyFileAsync($@"{uploadPath}\{fileNewName}", file);
-                datas.Add((fileNewName, $@"{uploadPath}\{fileNewName}"));
+                datas.Add((fileNewName, $@"{path}\{fileNewName}"));
                 results.Add(result);
             }
 
