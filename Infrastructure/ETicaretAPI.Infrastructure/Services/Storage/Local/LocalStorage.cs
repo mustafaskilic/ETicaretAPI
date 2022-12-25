@@ -37,7 +37,7 @@ namespace ETicaretAPI.Infrastructure.Services.Storage.Local
         {
             string uploadPath = Path.Combine(
              _webHostEnvironment.WebRootPath, path);
-            if (!Directory.Exists(uploadPath)) Directory.CreateDirectory(uploadPath);
+            Directory.CreateDirectory(uploadPath);
 
             List<(string fileName, string path)> datas = new();
             foreach (IFormFile file in files)
@@ -57,7 +57,7 @@ namespace ETicaretAPI.Infrastructure.Services.Storage.Local
             try
             {
                 await using FileStream fileStream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.None, 1024 * 1024, useAsync: false);
-
+                
                 await file.CopyToAsync(fileStream);
                 await fileStream.FlushAsync();
 
