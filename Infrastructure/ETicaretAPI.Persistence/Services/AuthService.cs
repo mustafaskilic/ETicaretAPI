@@ -7,6 +7,7 @@ using ETicaretAPI.Application.Features.Commands.AppUser.LoginUser;
 using ETicaretAPI.Domain.Entities.Identity;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using System.Text.Json;
 
@@ -19,13 +20,15 @@ namespace ETicaretAPI.Persistence.Services
         readonly UserManager<AppUser> _userManager;
         readonly ITokenHandler _tokenHandler;
         readonly SignInManager<AppUser> _signInManager;
-        public AuthService(IConfiguration configuration, IHttpClientFactory httpClientFactory, UserManager<Domain.Entities.Identity.AppUser> userManager, ITokenHandler tokenHandler, SignInManager<AppUser> signInManager)
+        readonly IUserService _userService;
+        public AuthService(IConfiguration configuration, IHttpClientFactory httpClientFactory, UserManager<Domain.Entities.Identity.AppUser> userManager, ITokenHandler tokenHandler, SignInManager<AppUser> signInManager, IUserService userService)
         {
             _httpClient = httpClientFactory.CreateClient();
             _configuration = configuration;
             _tokenHandler = tokenHandler;
             _userManager = userManager;
             _signInManager = signInManager;
+            _userService = userService;
         }
 
         async Task<Token> CreateUserExternalAsync(AppUser user, string email, string name, UserLoginInfo info, int accessTokenLifeTime)
@@ -52,13 +55,16 @@ namespace ETicaretAPI.Persistence.Services
             {
                 await _userManager.AddLoginAsync(user, info); //AspNetUserLogins
 
-                Token token = _tokenHandler.CreateAccessToken(accessTokenLifeTime);
+                Token token = _tokenHandler.CreateAccessToken(accessTokenLifeTime, user);
+
+                await _userService.UpdateRefreshToken(token.RefreshToken, user, token.Expiration, 15);
 
                 return token;
             }
 
             throw new Exception("Invalid external authentication.");
         }
+
         public async Task<Token> FacebookLoginAsync(string authToken, int accessTokenLifeTime)
         {
             string facebookDomain = "https://graph.facebook.com";
@@ -101,21 +107,35 @@ namespace ETicaretAPI.Persistence.Services
 
         public async Task<Token> LoginAsync(string userNameOrEmail, string password, int accessTokenLifeTime)
         {
-            AppUser appUser = await _userManager.FindByNameAsync(userNameOrEmail);
-            if (appUser is null)
-                appUser = await _userManager.FindByEmailAsync(userNameOrEmail);
+            AppUser user = await _userManager.FindByNameAsync(userNameOrEmail);
+            if (user is null)
+                user = await _userManager.FindByEmailAsync(userNameOrEmail);
 
-            if (appUser is null) throw new NotFoundUserException();
+            if (user is null) throw new NotFoundUserException();
 
-            SignInResult signInResult = await _signInManager.CheckPasswordSignInAsync(appUser, password, false);
-            if (signInResult.Succeeded)
+            SignInResult result = await _signInManager.CheckPasswordSignInAsync(user, password, false);
+            if (result.Succeeded)
             {
-                Token token = _tokenHandler.CreateAccessToken(accessTokenLifeTime);
+                Token token = _tokenHandler.CreateAccessToken(accessTokenLifeTime, user);
 
+                await _userService.UpdateRefreshToken(token.RefreshToken, user, token.Expiration, 15);
                 return token;
             }
-            
+
             throw new AuthenticationErrorException();
+        }
+
+        public async Task<Token> RefreshTokenLoginAsync(string refreshToken)
+        {
+            AppUser? user = await _userManager.Users.FirstOrDefaultAsync(u => u.RefreshToken == refreshToken);
+            if (user != null && user?.RefresTokenEndDate > DateTime.UtcNow)
+            {
+                Token token = _tokenHandler.CreateAccessToken(15, user);
+                await _userService.UpdateRefreshToken(token.RefreshToken, user, token.Expiration, 15);
+                return token;
+            }
+            else
+                throw new NotFoundUserException();
         }
     }
 }
