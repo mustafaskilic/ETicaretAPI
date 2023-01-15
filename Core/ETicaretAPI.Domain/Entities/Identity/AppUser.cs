@@ -14,5 +14,7 @@ namespace ETicaretAPI.Domain.Entities.Identity
         public string? RefreshToken { get; set; }
 
         public DateTime? RefresTokenEndDate { get; set; }
+
+        public ICollection<Basket> Baskets { get; set; }
     }
 }

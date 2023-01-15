@@ -25,9 +25,11 @@ namespace ETicaretAPI.Application.Features.Queries.ProductImageFile.GetProductIm
 
             return product?.ProductImageFiles.Select(img => new GetProductImagesQueryResponse
             {
-                Path = $"{_configuration["BaseStorageUrl:Azure"]}/{img.Path}",
+                Path = $"{img.Path}",
+                 //$"{_configuration["BaseStorageUrl:Azure"]}/{img.Path}",
                 FileName = img.FileName,
-                ID = img.ID
+                ID = img.ID,
+                Showcase= img.Showcase,
             }).ToList();
         }
     }

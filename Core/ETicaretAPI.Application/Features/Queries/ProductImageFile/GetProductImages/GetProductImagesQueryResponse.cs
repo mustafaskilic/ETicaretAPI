@@ -5,5 +5,6 @@
         public string Path { get; set; }
         public string FileName { get; set; }
         public Guid ID { get; set; }
+        public bool Showcase { get; set; }
     }
 }

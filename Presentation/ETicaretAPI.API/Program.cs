@@ -1,6 +1,7 @@
 using ETicaretAPI.Application;
 using ETicaretAPI.Application.Validators.Products;
 using ETicaretAPI.Infrastructure;
+using ETicaretAPI.SignalR;
 using ETicaretAPI.Infrastructure.Filters;
 using ETicaretAPI.Infrastructure.Services.Storage.Azure;
 using ETicaretAPI.Infrastructure.Services.Storage.Local;
@@ -17,18 +18,21 @@ using Serilog.Sinks.PostgreSQL;
 using System.Security.Claims;
 using Serilog.Context;
 using ETicaretAPI.API.Configurations.ColumnWriters;
+using ETicaretAPI.API.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddPersistenceServices();
 builder.Services.AddInfrastructureServices();
 builder.Services.AddApplicationServices();
+builder.Services.AddSignalRServices();
 // builder.Services.AddStorage(StorageType.Azure);
-builder.Services.AddStorage<AzureStorage>();
-//builder.Services.AddStorage<LocalStorage>();
+//builder.Services.AddStorage<AzureStorage>();
+ builder.Services.AddStorage<LocalStorage>();
 
 
-builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:4200", "https://localhost:4200")));
+builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.AllowAnyHeader().AllowAnyMethod().WithOrigins("http://localhost:4200", "https://localhost:4200").AllowCredentials()));
 
 
 builder.Services.AddControllers(options => options.Filters.Add<ValidationFilter>())
@@ -98,6 +102,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.UseSwaggerUI();
 }
+
+app.ConfigureExceptionHandler(app.Services.GetRequiredService<ILogger<Program>>());
 app.UseStaticFiles();
 app.UseHttpLogging();
 
@@ -116,5 +122,5 @@ app.Use(async (context, next) =>
 });
 
 app.MapControllers();
-
+app.MapHubs();
 app.Run();
