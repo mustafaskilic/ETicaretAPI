@@ -24,6 +24,7 @@ namespace ETicaretAPI.Persistence.Services
         readonly IBasketItemWriteRepository _basketItemWriteRepository;
         readonly IBasketItemReadRepository _basketItemReadRepository;
 
+
         public BasketService(IHttpContextAccessor httpContext, UserManager<AppUser> userManager, IOrderReadRepository orderReadRepository, IBasketWriteRepository basketWriteRepository, IBasketItemWriteRepository basketItemWriteRepository, IBasketItemReadRepository basketItemReadRepository, IBasketReadRepository basketReadRepository)
         {
             _httpContext = httpContext;
@@ -78,7 +79,7 @@ namespace ETicaretAPI.Persistence.Services
                 BasketItem _basketItem = await _basketItemReadRepository.GetSingleAsync(bi => bi.BasketId == basket.ID && bi.ProductId == Guid.Parse(basketItem.ProductID));
 
                 if (_basketItem != null)
-                    _basketItem.Quantity+= basketItem.Quantity;
+                    _basketItem.Quantity += basketItem.Quantity;
                 else
                     await _basketItemWriteRepository.AddAsync(new()
                     {
@@ -120,6 +121,15 @@ namespace ETicaretAPI.Persistence.Services
             {
                 _basketItem.Quantity = basketItem.Quantity;
                 await _basketItemWriteRepository.SaveAsync();
+            }
+        }
+
+        public Basket? GetUserActiveBasket
+        {
+            get
+            {
+                Basket? basket = ContextUser().Result;
+                return basket;
             }
         }
     }
